@@ -29,6 +29,35 @@
 #include <utility>
 #include <vector>
 
+/*
+主要使用场景
+1. 钱包管理
+创建和加载钱包
+备份和恢复
+加密和解密
+2. 交易处理
+创建新交易
+签名交易
+广播交易
+处理交易确认
+3. 余额管理
+计算可用余额
+管理未确认交易
+处理找零
+4. 地址管理
+生成新地址
+管理地址簿
+支持HD钱包
+5. 安全功能
+私钥加密
+交易验证
+冲突检测
+
+
+*/
+
+
+
 typedef CWallet* CWalletRef;
 extern std::vector<CWalletRef> vpwallets;
 
@@ -96,7 +125,17 @@ enum WalletFeature
     FEATURE_LATEST = FEATURE_COMPRPUBKEY // HD is optional, use FEATURE_COMPRPUBKEY as latest version
 };
 
-
+/*
+管理预生成的密钥对
+主要功能：
+存储公钥和时间戳
+区分内部和外部地址（用于找零）
+支持HD钱包的密钥派生
+使用场景：
+快速生成新地址
+管理HD钱包的密钥链
+优化钱包性能
+*/
 /** A key pool entry */
 class CKeyPool
 {
@@ -133,6 +172,18 @@ public:
     }
 };
 
+
+/*
+作用： 存储地址的标签和用途信息
+主要功能：
+管理地址的友好名称
+存储地址的用途说明
+支持自定义数据字段
+使用场景：
+用户界面显示
+地址管理
+交易记录的可读性
+*/
 /** Address book data */
 class CAddressBookData
 {
@@ -263,6 +314,17 @@ public:
  * A transaction with a bunch of additional info that only the owner cares about.
  * It includes any unrecorded transactions needed to link it back to the block chain.
  */
+/*
+主要功能：
+存储交易的详细信息
+管理交易的确认状态
+计算交易的借贷金额
+处理交易的元数据
+使用场景：
+显示交易历史
+计算钱包余额
+处理交易确认
+*/
 class CWalletTx : public CMerkleTx
 {
 private:
@@ -472,7 +534,17 @@ public:
     std::set<uint256> GetConflicts() const;
 };
 
-
+/*
+作用： 表示交易输入的具体币
+主要功能：
+封装输出点和交易输出
+支持比较和排序操作
+提供类型安全的接口
+使用场景：
+交易构建
+币选择算法
+手续费计算
+*/
 class CInputCoin {
 public:
     CInputCoin(const CWalletTx* walletTx, unsigned int i)
@@ -502,6 +574,17 @@ public:
     }
 };
 
+
+/*
+作用： 表示钱包中可用的交易输出
+主要功能：
+标识输出是否可花费
+标记输出是否安全
+计算输出的确认深度
+使用场景：
+选择交易输入
+计算可用余额
+交易构建*/
 class COutput
 {
 public:
@@ -532,7 +615,20 @@ public:
 
 
 
+/*
 
+钱包密钥类 (CWalletKey)
+作用： 管理私钥的生命周期
+主要功能：
+存储加密的私钥
+管理密钥的创建和过期时间
+支持密钥注释
+使用场景：
+密钥备份
+密钥轮换
+安全审计
+
+*/
 /** Private key that includes an expiration date in case it never gets used. */
 class CWalletKey
 {
@@ -560,6 +656,19 @@ public:
     }
 };
 
+
+/*
+会计条目类 (CAccountingEntry)
+作用： 管理钱包的内部转账记录
+主要功能：
+    记录账户间的资金转移
+    维护交易顺序
+    支持注释和元数据
+使用场景：
+    账户管理
+    财务报告
+    交易分类
+*/
 /**
  * Internal transfers.
  * Database key is acentry<account><counter>.
@@ -646,6 +755,19 @@ private:
 /** 
  * A CWallet is an extension of a keystore, which also maintains a set of transactions and balances,
  * and provides the ability to create new transactions.
+ */
+
+ /*
+ 主要功能：
+    管理私钥和公钥
+    维护交易记录和余额
+    创建和签名交易
+    管理地址簿
+    处理HD钱包（分层确定性钱包）
+使用场景：
+    用户钱包的主要接口
+    处理发送和接收比特币
+    管理钱包状态和配置
  */
 class CWallet : public CCryptoKeyStore, public CValidationInterface
 {
@@ -1127,6 +1249,19 @@ public:
     bool SetHDMasterKey(const CPubKey& key);
 };
 
+
+/*
+保留密钥类 (CReserveKey)
+作用： 管理从密钥池中分配的密钥
+主要功能：
+从密钥池获取密钥
+管理密钥的生命周期
+支持密钥的返回和保留
+使用场景：
+交易创建
+地址生成
+密钥管理
+*/
 /** A key allocated from the key pool. */
 class CReserveKey : public CReserveScript
 {
@@ -1156,7 +1291,17 @@ public:
     void KeepScript() override { KeepKey(); }
 };
 
-
+/*
+ 账户类 (CAccount)
+作用： 表示钱包中的账户
+主要功能：
+存储账户的公钥
+支持账户的序列化
+使用场景：
+多账户钱包
+账户分离
+资金管理
+*/
 /** 
  * Account information.
  * Stored in wallet with key "acc"+string account name.
