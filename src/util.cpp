@@ -177,38 +177,40 @@ static FILE* fileout = NULL;
 static boost::mutex* mutexDebugLog = NULL;
 static std::list<std::string>* vMsgsBeforeOpenLog;
 
+// 朝文件写字符。。。
 static int FileWriteStr(const std::string &str, FILE *fp)
 {
     return fwrite(str.data(), 1, str.size(), fp);
 }
 
+// 初始化DebugPrint.
 static void DebugPrintInit()
 {
     assert(mutexDebugLog == NULL);
-    mutexDebugLog = new boost::mutex();
-    vMsgsBeforeOpenLog = new std::list<std::string>;
+    mutexDebugLog = new boost::mutex();                     // 一个mutex,
+    vMsgsBeforeOpenLog = new std::list<std::string>;        // 一个list string的容器
 }
 
 void OpenDebugLog()
 {
-    boost::call_once(&DebugPrintInit, debugPrintInitFlag);
-    boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
+    boost::call_once(&DebugPrintInit, debugPrintInitFlag);          // 日志初始化
+    boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);          // 打开日志mutex. 做创建文件的lock
 
     assert(fileout == NULL);
     assert(vMsgsBeforeOpenLog);
     fs::path pathDebug = GetDataDir() / "debug.log";
-    fileout = fsbridge::fopen(pathDebug, "a");
+    fileout = fsbridge::fopen(pathDebug, "a");                      // 创建debug.log 文件，以append形式。
     if (fileout) {
-        setbuf(fileout, NULL); // unbuffered
+        setbuf(fileout, NULL); // unbuffered                                    // ？？？？？？？？？？？？？？？？？？？z这个干嘛用的？？？？？？？？？？？？
         // dump buffered messages from before we opened the log
         while (!vMsgsBeforeOpenLog->empty()) {
-            FileWriteStr(vMsgsBeforeOpenLog->front(), fileout);
+            FileWriteStr(vMsgsBeforeOpenLog->front(), fileout);     // 把 list string里面的str 都序列化到fileout里面
             vMsgsBeforeOpenLog->pop_front();
         }
     }
 
     delete vMsgsBeforeOpenLog;
-    vMsgsBeforeOpenLog = NULL;
+    vMsgsBeforeOpenLog = NULL;                              // 删除list string的容器
 }
 
 struct CLogCategoryDesc
@@ -245,6 +247,8 @@ const CLogCategoryDesc LogCategories[] =
     {BCLog::ALL, "all"},
 };
 
+
+// 根据str 得到 LogCategory的flag, 查找到返回true,否则返回false.
 bool GetLogCategory(uint32_t *f, const std::string *str)
 {
     if (f && str) {
@@ -262,6 +266,8 @@ bool GetLogCategory(uint32_t *f, const std::string *str)
     return false;
 }
 
+
+// 罗列所有的log category, 并返回一个string. 不包含BClog.NONE, BCLog.All.
 std::string ListLogCategories()
 {
     std::string ret;
@@ -285,7 +291,7 @@ std::vector<CLogCategoryActive> ListActiveLogCategories()
         if (LogCategories[i].flag != BCLog::NONE && LogCategories[i].flag != BCLog::ALL) {
             CLogCategoryActive catActive;
             catActive.category = LogCategories[i].category;
-            catActive.active = LogAcceptCategory(LogCategories[i].flag);
+            catActive.active = LogAcceptCategory(LogCategories[i].flag);    // 当前是否打开了此log Category.
             ret.push_back(catActive);
         }
     }
@@ -330,21 +336,21 @@ int LogPrintStr(const std::string &str)
     int ret = 0; // Returns total number of characters written
     static std::atomic_bool fStartedNewLine(true);
 
-    std::string strTimestamped = LogTimestampStr(str, &fStartedNewLine);
+    std::string strTimestamped = LogTimestampStr(str, &fStartedNewLine);        // 加上时间戳.
 
-    if (fPrintToConsole)
+    if (fPrintToConsole)        // 是否输出再stdout.
     {
         // print to console
         ret = fwrite(strTimestamped.data(), 1, strTimestamped.size(), stdout);
         fflush(stdout);
     }
-    else if (fPrintToDebugLog)
+    else if (fPrintToDebugLog)          // 输出到debug.log文件.
     {
         boost::call_once(&DebugPrintInit, debugPrintInitFlag);
         boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
 
         // buffer if we haven't opened the log yet
-        if (fileout == NULL) {
+        if (fileout == NULL) {                          // 当文件未打开，直接写入到缓存。
             assert(vMsgsBeforeOpenLog);
             ret = strTimestamped.length();
             vMsgsBeforeOpenLog->push_back(strTimestamped);
@@ -409,10 +415,10 @@ void ArgsManager::ParseParameters(int argc, const char* const argv[])
             break;
 
         // Interpret --foo as -foo.
-        // If both --foo and -foo are set, the last takes effect.
+        // If both --foo and -foo are set, the last takes effect./////////////////////////唯一要点
         if (str.length() > 1 && str[1] == '-')
             str = str.substr(1);
-        InterpretNegativeSetting(str, strValue);
+        InterpretNegativeSetting(str, strValue);    /////////////////////////////////////唯二要点
 
         mapArgs[str] = strValue;
         mapMultiArgs[str].push_back(strValue);
@@ -571,6 +577,11 @@ const fs::path &GetDataDir(bool fNetSpecific)
             return path;
         }
     } else {
+        // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
+        // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin
+        // Mac: ~/Library/Application Support/Bitcoin
+        // Unix: ~/.bitcoin
+        
         path = GetDefaultDataDir();
     }
     if (fNetSpecific)
