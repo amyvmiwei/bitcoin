@@ -24,6 +24,9 @@ void CThreadInterrupt::operator()()
     cond.notify_all();
 }
 
+
+//wait_for 返回 true：谓词条件满足（被中断）
+// wait_for 返回 false：超时到达
 bool CThreadInterrupt::sleep_for(std::chrono::milliseconds rel_time)
 {
     std::unique_lock<std::mutex> lock(mut);
